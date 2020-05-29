@@ -55,12 +55,29 @@ public class Connection {
 	}
 
 	/**
+	 * Get input stream for accepted connection
+	 * @return input stream for this connection
+	 * @throws IOException if could not create input stream
+	 */
+	public InputStream getInputStream() throws IOException {
+		return client.getInputStream();
+	}
+
+	/**
 	 * Get output stream for accepted connection
 	 * @return output stream for this connection
 	 * @throws IOException if could not create output stream
 	 */
 	public OutputStream getOutputStream() throws IOException {
 		return client.getOutputStream();
+	}
+
+	/**
+	 * Closes client-proxy connection
+	 * @throws IOException if there's an error while attempting to close
+	 */
+	public void close() throws IOException {
+		client.close();
 	}
 
 
