@@ -1,5 +1,9 @@
+import java.net.ServerSocket;
 import java.net.Socket;
 
+/**
+ * HTTP Proxy for handling requests between clients and servers.
+ */
 public class Proxy {
 
 	/**
@@ -23,16 +27,14 @@ public class Proxy {
 		}
 
 		// Make new TCP connection
-		TCPUtil tcpSocket = new TCPUtil(port);
+		ServerSocket proxy = TCPUtils.getProxy(port);
 
 		// Accept client connections
 		while (true) {
-			// TODO: does accept() need to return socket??
-			Socket client = tcpSocket.accept();
-			ProxyThread thread = new ProxyThread(tcpSocket);
+			Connection client = TCPUtils.accept(proxy);
+			ProxyThread thread = new ProxyThread(client);
 			thread.start();
 		}
-
 	}
 
 	/**

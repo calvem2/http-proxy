@@ -1,21 +1,24 @@
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Class for handling requests for a single client-proxy connection
+ */
 public class ProxyThread extends Thread {
 	private static final int PORT = 80;
 	private static final int SECURE_PORT = 443;
 
-	private TCPUtil clientConnection;	// connection from client to proxy
+	private Connection clientConnection;	// connection from client to proxy
 	private Socket serverConnection;	// connection from proxy to server
 
 	/**
 	 * Creates new thread for given established connection
 	 * @param clientConnection TCP connection from client to proxy
 	 */
-	public ProxyThread(TCPUtil clientConnection) {
+	public ProxyThread(Connection clientConnection) {
 		this.clientConnection = clientConnection;
 	}
 
@@ -31,35 +34,35 @@ public class ProxyThread extends Thread {
 				handleNonConnect();
 			}
 		}
+
+		// TODO: close socket?
 	}
 
+	/**
+	 * Tries to establish a connection between client and a server.
+	 * If connection is successful, forwards data between client and server.
+	 * @param initLine first line of the HTTP request proxy received to establish connection
+	 * @param headers headers of HTTP request proxy received to establish connection
+	 */
 	public void handleConnect(String initLine, Map<String, String> headers) {
 		try {
 			// Create connection
 			String hostHeader = headers.get("host");
 			serverConnection = new Socket(getHost(hostHeader), getPort(initLine, hostHeader));
 
-			if (serverConnection.isConnected()) {
-				// Send HTTP response
-				clientConnection.write("HTTP/1.0 200 OK\r\n\r\n");
+			// Send HTTP response
+			clientConnection.write("HTTP/1.0 200 OK\r\n\r\n");
 
-				// Transfer bytes from client and server
-				InputStream fromClient = clientConnection.getInputStream();
-				OutputStream toServer = serverConnection.getOutputStream();
-				fromClient.transferTo(toServer);
+			// Transfer bytes from client and server
+			TunnelThread clientToServer = new TunnelThread(clientConnection.getSocket(), serverConnection);
+			clientToServer.start();
 
-				// Transfer bytes from server to client
-				InputStream fromServer = serverConnection.getInputStream();
-				OutputStream toClient = clientConnection.getOutputStream();
-				fromServer.transferTo(toClient);
-			} else {
-				// Send HTTP error response
-				clientConnection.write("HTTP/1.0 502 Bad Gateway\r\n\r\n");
-			}
-
+			// Transfer bytes from server to client
+			TunnelThread serverToClient = new TunnelThread(serverConnection, clientConnection.getSocket());
+			serverToClient.start();
 		} catch (Exception e) {
-			// TODO: handle this
-
+			// Send HTTP error response
+			clientConnection.write("HTTP/1.0 502 Bad Gateway\r\n\r\n");
 		}
 	}
 
@@ -72,7 +75,7 @@ public class ProxyThread extends Thread {
 	 * @return Map from header keyword to value for all specified headers
 	 */
 	public Map<String, String> getHeaders() {
-		Map<String, String> headers = new HashMap<>();
+		Map<String, String> headers = new LinkedHashMap<>();
 		String nextLine = clientConnection.readLine();
 		while (!nextLine.equals("\r\n")) {
 			String[] elements = nextLine.split(":", 1);
