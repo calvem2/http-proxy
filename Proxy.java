@@ -1,5 +1,7 @@
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  * HTTP Proxy for handling requests between clients and servers.
@@ -30,6 +32,8 @@ public class Proxy {
 		ServerSocket proxy = TCPUtils.getProxy(port);
 
 		// Accept client connections
+		String date = new SimpleDateFormat("dd MMM HH:mm:ss").format(new Date());
+		System.out.println(date + " - Proxy listening on " + proxy.getInetAddress().getHostAddress() + ":" + port);
 		while (true) {
 			Connection client = TCPUtils.accept(proxy);
 			ProxyThread thread = new ProxyThread(client);

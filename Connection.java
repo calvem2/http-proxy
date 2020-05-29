@@ -55,15 +55,6 @@ public class Connection {
 	}
 
 	/**
-	 * Get input stream for accepted connection
-	 * @return input stream for this connection
-	 * @throws IOException if could not create input stream
-	 */
-	public InputStream getInputStream() throws IOException {
-		return client.getInputStream();
-	}
-
-	/**
 	 * Get output stream for accepted connection
 	 * @return output stream for this connection
 	 * @throws IOException if could not create output stream

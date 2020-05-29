@@ -1,6 +1,6 @@
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -23,8 +23,14 @@ public class ProxyThread extends Thread {
 	}
 
 	public void run() {
-		// Decide if CONNECT or NON-CONNECT
+		// Get request line
 		String initLine = clientConnection.readLine();
+
+		// Output first line of request
+		String date = new SimpleDateFormat("dd MMM HH:mm:ss").format(new Date());
+		System.out.println(date + " - >>> " + initLine);
+
+		// Decide if CONNECT or NON-CONNECT
 		Map<String, String> headers = getHeaders();
 		if (initLine != null) {
 			String[] elements = initLine.split(" ");
@@ -67,7 +73,7 @@ public class ProxyThread extends Thread {
 	}
 
 	public void handleNonConnect() {
-
+		//
 	}
 
 	/**
