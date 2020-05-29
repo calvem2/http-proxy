@@ -32,15 +32,17 @@ public class ProxyThread extends Thread {
 		// Output first line of request
 		String date = new SimpleDateFormat("dd MMM HH:mm:ss").format(new Date());
 		System.out.println(date + " - >>> " + initLine);
-
+		System.out.println("Printed initial line");
 		// Decide if CONNECT or NON-CONNECT
 		headers = getHeaders();
 		if (initLine != null) {
 			String[] elements = initLine.split(" ");
+			String host = getHost(headers.get("host"));
+			int port = getPort(initLine, headers.get("host"));
 			if (elements[0].equals("CONNECT")) {
-				handleConnect(initLine);
+				handleConnect(host, port);
 			} else {
-				handleNonConnect(initLine);
+				handleNonConnect(host, port, initLine);
 			}
 		}
 
@@ -57,13 +59,12 @@ public class ProxyThread extends Thread {
 	/**
 	 * Tries to establish a connection between client and a server.
 	 * If connection is successful, forwards data between client and server.
-	 * @param initLine first line of the HTTP request proxy received to establish connection
 	 */
-	public void handleConnect(String initLine) {
+	public void handleConnect(String host, int port) {
 		try {
+			System.out.println("Handling CONNECT request");
 			// Create connection
-			String hostHeader = headers.get("host");
-			serverConnection = new Socket(getHost(hostHeader), getPort(initLine, hostHeader));
+			serverConnection = new Socket(host, port);
 
 			// Send HTTP response
 			clientConnection.write("HTTP/1.0 200 OK\r\n\r\n");
@@ -87,11 +88,10 @@ public class ProxyThread extends Thread {
 	 * server response to client
 	 * @param initLine request line of HTTP client request
 	 */
-	public void handleNonConnect(String initLine) {
+	public void handleNonConnect(String host, int port, String initLine) {
 		try {
 			// Create connection
-			String hostHeader = headers.get("host");
-			serverConnection = new Socket(getHost(hostHeader), getPort(initLine, hostHeader));
+			serverConnection = new Socket(host, port);
 
 			StringBuffer request = new StringBuffer();
 
@@ -143,7 +143,9 @@ public class ProxyThread extends Thread {
 	 * @return Map from header keyword to value for all specified headers
 	 */
 	public Map<String, String> getHeaders() {
+		System.out.println("Handling headers");
 		Map<String, String> headers = new LinkedHashMap<>();
+		System.out.println("About to try and read ok go");
 		String nextLine = clientConnection.readLine();
 		System.out.println(nextLine);
 		while (nextLine != null && !nextLine.equals("\r\n")) {
@@ -152,6 +154,7 @@ public class ProxyThread extends Thread {
 			headers.put(elements[0].toLowerCase().trim(), elements[1].trim());
 			nextLine = clientConnection.readLine();
 		}
+		System.out.println("Done handling headers");
 		return headers;
 	}
 

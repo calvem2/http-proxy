@@ -22,9 +22,11 @@ public class Connection {
 	public String readLine() {
 		String line = null;
 		try {
+			System.out.println("Trying to read");
 			InputStreamReader streamReader = new InputStreamReader(client.getInputStream());
 			BufferedReader reader = new BufferedReader(streamReader);
 			line = reader.readLine();
+			System.out.println("Read the line: " + line);
 		} catch (IOException e) {
 			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
