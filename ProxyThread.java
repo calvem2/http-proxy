@@ -1,6 +1,8 @@
 import java.io.*;
+import java.lang.reflect.Array;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -33,6 +35,7 @@ public class ProxyThread extends Thread {
 		String date = new SimpleDateFormat("dd MMM HH:mm:ss").format(new Date());
 		System.out.println(date + " - >>> " + initLine);
 		System.out.println("Printed initial line");
+
 		// Decide if CONNECT or NON-CONNECT
 		headers = getHeaders();
 		if (initLine != null) {
@@ -47,13 +50,13 @@ public class ProxyThread extends Thread {
 		}
 
 		// TODO: close socket?
-		try {
-			clientConnection.close();
-			serverConnection.close();
-		} catch (IOException e) {
-			System.out.println("Error closing connection(s)");
-			e.printStackTrace();
-		}
+//		try {
+//			clientConnection.close();
+//			serverConnection.close();
+//		} catch (IOException e) {
+//			System.out.println("Error closing connection(s)");
+//			e.printStackTrace();
+//		}
 	}
 
 	/**
@@ -71,11 +74,14 @@ public class ProxyThread extends Thread {
 
 			// Transfer bytes from client and server
 			TunnelThread clientToServer = new TunnelThread(clientConnection.getSocket(), serverConnection);
-			clientToServer.start();
+
 
 			// Transfer bytes from server to client
 			TunnelThread serverToClient = new TunnelThread(serverConnection, clientConnection.getSocket());
+
+			clientToServer.start();
 			serverToClient.start();
+			System.out.println("Done with CONNECT request");
 		} catch (Exception e) {
 			// Send HTTP error response
 			clientConnection.write("HTTP/1.0 502 Bad Gateway\r\n\r\n");
@@ -125,6 +131,7 @@ public class ProxyThread extends Thread {
 			while (nextLine != null) {
 				if (nextLine.contains("HTTP/")) {
 					nextLine.replaceAll("HTTP\\/.*", "HTTP/1.0\r\n");
+					System.out.println(nextLine);
 				} else if (nextLine.toLowerCase().contains("connection") ||
 						nextLine.toLowerCase().contains("proxy-connection")) {
 					nextLine.replace("keep-alive", "close");
@@ -132,10 +139,14 @@ public class ProxyThread extends Thread {
 				clientConnection.write(nextLine);
 				nextLine = serverReader.readLine();
 			}
+//			// Clean up
+//			clientConnection.close();
+//			serverConnection.close();
 		} catch (Exception e) {
 			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
 		}
+
 	}
 
 	/**
@@ -148,9 +159,10 @@ public class ProxyThread extends Thread {
 		System.out.println("About to try and read ok go");
 		String nextLine = clientConnection.readLine();
 		System.out.println(nextLine);
-		while (nextLine != null && !nextLine.equals("\r\n")) {
-			System.out.println(nextLine);
-			String[] elements = nextLine.split(":", 1);
+		while (nextLine != null && !nextLine.equals("")) {
+			System.out.println("Header for to be parsed: " + nextLine);
+			String[] elements = nextLine.split(":", 2);
+			System.out.println(Arrays.toString(elements));
 			headers.put(elements[0].toLowerCase().trim(), elements[1].trim());
 			nextLine = clientConnection.readLine();
 		}

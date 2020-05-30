@@ -1,11 +1,13 @@
 import java.io.*;
 import java.net.Socket;
+import java.util.Arrays;
 
 /**
  * A class representing a client-proxy connection.
  */
 public class Connection {
 	private Socket client;
+	BufferedReader reader;
 
 	/**
 	 * Creates new connection between client and proxy
@@ -13,6 +15,13 @@ public class Connection {
 	 */
 	public Connection(Socket client) {
 		this.client = client;
+		try {
+			InputStreamReader streamReader = new InputStreamReader(client.getInputStream());
+			reader = new BufferedReader(streamReader);
+		} catch (IOException e) {
+			System.out.println("Error: " + e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -23,10 +32,14 @@ public class Connection {
 		String line = null;
 		try {
 			System.out.println("Trying to read");
-			InputStreamReader streamReader = new InputStreamReader(client.getInputStream());
-			BufferedReader reader = new BufferedReader(streamReader);
+//			InputStreamReader streamReader = new InputStreamReader(client.getInputStream());
+//			BufferedReader reader = new BufferedReader(streamReader);
 			line = reader.readLine();
 			System.out.println("Read the line: " + line);
+//			char[] buf = new char[256];
+//			int read = reader.read(buf, 0, 256);
+//			System.out.println("Read the line: " + Arrays.toString(buf));
+//			System.out.println("Read " + read + " bytes");
 		} catch (IOException e) {
 			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();

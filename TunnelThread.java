@@ -1,6 +1,4 @@
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
 
 /**
@@ -23,12 +21,26 @@ public class TunnelThread extends Thread {
 
 	public void run() {
 		try {
-			InputStream fromSender = sender.getInputStream();
+			System.out.println("Handling tunnel");
+			InputStream fromSender = new DataInputStream(sender.getInputStream());
 			OutputStream toReceiver = receiver.getOutputStream();
 			fromSender.transferTo(toReceiver);
+			fromSender.close();
+			toReceiver.flush();
+			toReceiver.close();
+			System.out.println("Done with tunnel");
 		} catch (IOException e) {
 			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
 		}
+
+		// Clean up
+//		try {
+//			sender.close();
+//			receiver.close();
+//		} catch (IOException e) {
+//			System.out.println("Error closing socket");
+//			e.printStackTrace();
+//		}
 	}
 }
