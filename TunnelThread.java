@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 
 /**
  * Class for handling a single CONNECT request for a client.
@@ -22,13 +23,15 @@ public class TunnelThread extends Thread {
 	public void run() {
 		try {
 			System.out.println("Handling tunnel");
-			InputStream fromSender = new DataInputStream(sender.getInputStream());
-			OutputStream toReceiver = receiver.getOutputStream();
+			DataInputStream fromSender = new DataInputStream(sender.getInputStream());
+			DataOutputStream toReceiver = new DataOutputStream(receiver.getOutputStream());
 			fromSender.transferTo(toReceiver);
-			fromSender.close();
-			toReceiver.flush();
-			toReceiver.close();
+//			fromSender.close();
+//			toReceiver.flush();
+//			toReceiver.close();
 			System.out.println("Done with tunnel");
+		} catch (SocketException se){
+			// do something? see ed post...
 		} catch (IOException e) {
 			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();

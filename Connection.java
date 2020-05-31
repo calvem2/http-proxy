@@ -31,11 +31,11 @@ public class Connection {
 	public String readLine() {
 		String line = null;
 		try {
-			System.out.println("Trying to read");
+//			System.out.println("Trying to read");
 //			InputStreamReader streamReader = new InputStreamReader(client.getInputStream());
 //			BufferedReader reader = new BufferedReader(streamReader);
 			line = reader.readLine();
-			System.out.println("Read the line: " + line);
+//			System.out.println("Read the line: " + line);
 //			char[] buf = new char[256];
 //			int read = reader.read(buf, 0, 256);
 //			System.out.println("Read the line: " + Arrays.toString(buf));

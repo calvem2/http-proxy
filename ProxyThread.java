@@ -30,15 +30,14 @@ public class ProxyThread extends Thread {
 	public void run() {
 		// Get request line
 		String initLine = clientConnection.readLine();
-
-		// Output first line of request
-		String date = new SimpleDateFormat("dd MMM HH:mm:ss").format(new Date());
-		System.out.println(date + " - >>> " + initLine);
-		System.out.println("Printed initial line");
-
-		// Decide if CONNECT or NON-CONNECT
 		headers = getHeaders();
 		if (initLine != null) {
+			// Output first line of request
+			String date = new SimpleDateFormat("dd MMM HH:mm:ss").format(new Date());
+			System.out.println(date + " - >>> " + initLine);
+			System.out.println("Printed initial line");
+
+			// Determine request type: CONNECT or NON-CONNECT
 			String[] elements = initLine.split(" ");
 			String host = getHost(headers.get("host"));
 			int port = getPort(initLine, headers.get("host"));
@@ -48,6 +47,7 @@ public class ProxyThread extends Thread {
 				handleNonConnect(host, port, initLine);
 			}
 		}
+		System.out.println("Done handling request");
 
 		// TODO: close socket?
 //		try {
@@ -65,7 +65,7 @@ public class ProxyThread extends Thread {
 	 */
 	public void handleConnect(String host, int port) {
 		try {
-			System.out.println("Handling CONNECT request");
+			System.out.println("Handling CONNECT");
 			// Create connection
 			serverConnection = new Socket(host, port);
 
@@ -96,37 +96,48 @@ public class ProxyThread extends Thread {
 	 */
 	public void handleNonConnect(String host, int port, String initLine) {
 		try {
+			System.out.println("Handling non-connect");
 			// Create connection
 			serverConnection = new Socket(host, port);
+			OutputStream toServer = serverConnection.getOutputStream();
 
-			StringBuffer request = new StringBuffer();
-
-			// Edit request line
+			// Edit request line and send
 			String requestLine = initLine.replaceAll("HTTP\\/.*", "HTTP/1.0\r\n");
-			request.append(requestLine);
+//			request.append(requestLine);
+			toServer.write(requestLine.getBytes());
 
-			// Edit headers
+			// Edit headers and send
 			for (Map.Entry<String, String> h : headers.entrySet()) {
-				request.append(h.getKey());
+				StringBuilder header = new StringBuilder();
+				header.append(h.getKey() + ": ");
 				if (h.getKey().equalsIgnoreCase("connection") ||
 						h.getKey().equalsIgnoreCase("proxy-connection")) {
-					request.append("close\r\n");
+					header.append("close\r\n");
 				} else {
-					request.append(h.getValue() + "\r\n");
+					header.append(h.getValue() + "\r\n");
 				}
+				toServer.write(header.toString().getBytes());
+				System.out.println("Header sent to server: " + header.toString());
 			}
+			toServer.write("\r\n".getBytes());
 
 			// Pass header on to server
-			clientConnection.write(request.toString());
+			// WOW this was so wrong
+//			clientConnection.write(request.toString());
+//
+//			// Send rest of request to server
+//			InputStream fromClient = clientConnection.getInputStream();
+//			OutputStream toServer = serverConnection.getOutputStream();
+//			fromClient.transferTo(toServer);
 
 			// Send rest of request to server
 			InputStream fromClient = clientConnection.getInputStream();
-			OutputStream toServer = serverConnection.getOutputStream();
 			fromClient.transferTo(toServer);
 
 			// Send server response to client
 			InputStreamReader streamReader = new InputStreamReader(serverConnection.getInputStream());
 			BufferedReader serverReader = new BufferedReader(streamReader);
+			System.out.println("Sending response back to client...");
 			String nextLine = serverReader.readLine();
 			while (nextLine != null) {
 				if (nextLine.contains("HTTP/")) {
@@ -136,12 +147,17 @@ public class ProxyThread extends Thread {
 						nextLine.toLowerCase().contains("proxy-connection")) {
 					nextLine.replace("keep-alive", "close");
 				}
-				clientConnection.write(nextLine);
+
+				System.out.println(nextLine);
+				clientConnection.write("Line sent: " + nextLine);
 				nextLine = serverReader.readLine();
 			}
+
+			System.out.println("Done sending to client");
 //			// Clean up
 //			clientConnection.close();
 //			serverConnection.close();
+			System.out.println("Done with non connect");
 		} catch (Exception e) {
 			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
@@ -156,13 +172,13 @@ public class ProxyThread extends Thread {
 	public Map<String, String> getHeaders() {
 		System.out.println("Handling headers");
 		Map<String, String> headers = new LinkedHashMap<>();
-		System.out.println("About to try and read ok go");
+//		System.out.println("About to try and read ok go");
 		String nextLine = clientConnection.readLine();
-		System.out.println(nextLine);
+//		System.out.println(nextLine);
 		while (nextLine != null && !nextLine.equals("")) {
-			System.out.println("Header for to be parsed: " + nextLine);
+//			System.out.println("Header for to be parsed: " + nextLine);
 			String[] elements = nextLine.split(":", 2);
-			System.out.println(Arrays.toString(elements));
+//			System.out.println(Arrays.toString(elements));
 			headers.put(elements[0].toLowerCase().trim(), elements[1].trim());
 			nextLine = clientConnection.readLine();
 		}
