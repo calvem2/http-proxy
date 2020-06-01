@@ -1,0 +1,8 @@
+#!/bin/bash
+port_number=$1
+
+# Compile the Java programs
+javac Proxy.java
+
+# Pass the arguments to the Java class 
+java Proxy ${port_number}
