@@ -25,26 +25,17 @@ public class TunnelThread extends Thread {
 	 */
 	public void run() {
 		try {
-//			System.out.println("Handling tunnel");
 			DataInputStream fromSender = new DataInputStream(sender.getInputStream());
 			DataOutputStream toReceiver = new DataOutputStream(receiver.getOutputStream());
 			fromSender.transferTo(toReceiver);
-//			fromSender.close();
-//			toReceiver.flush();
-//			toReceiver.close();
-//			System.out.println("Done with tunnel");
 		} catch (SocketException se){
-			// TODO: hi
-			// do nothing? see ed post..."just general try catch blocks to handle cases where socket closed"
-			// https://us.edstem.org/courses/403/discussion/72632
-
+			// Do nothing - catching when socket is closed
 		} catch (IOException e) {
-//			System.out.println("Error: " + e.getMessage());
+			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
 		}
-
-		// TODO: clean up?
-		// Clean up
+//		// TODO: clean up?
+//		// Clean up
 //		try {
 //			sender.close();
 //			receiver.close();

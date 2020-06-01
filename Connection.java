@@ -6,7 +6,7 @@ import java.net.Socket;
  */
 public class Connection {
 	private Socket client;
-	private BufferedReader reader; 	//TODO: may not be using all of these
+	private BufferedReader reader;
 	private DataOutputStream out;
 
 	/**
@@ -49,7 +49,7 @@ public class Connection {
 			out.write(buf.getBytes());
 			out.flush();
 		} catch (IOException e){
-			System.out.println("SADNESS Error: " + e.getMessage());
+			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
 		}
 	}
@@ -74,7 +74,6 @@ public class Connection {
 		return this.reader;
 	}
 
-	// TODO: may not need if we're not closing...but like we probs should be?
 	/**
 	 * Closes client-proxy connection
 	 * @throws IOException if there's an error while attempting to close
@@ -82,6 +81,4 @@ public class Connection {
 	public void close() throws IOException {
 		client.close();
 	}
-
-
 }
