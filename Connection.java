@@ -1,6 +1,5 @@
 import java.io.*;
 import java.net.Socket;
-import java.util.Arrays;
 
 /**
  * A class representing a client-proxy connection.
@@ -9,7 +8,6 @@ public class Connection {
 	private Socket client;
 	private BufferedReader reader; 	//TODO: may not be using all of these
 	private DataOutputStream out;
-	private DataInputStream input;
 
 	/**
 	 * Creates new connection between client and proxy
@@ -18,11 +16,9 @@ public class Connection {
 	public Connection(Socket client) {
 		this.client = client;
 		try {
-			input = new DataInputStream(client.getInputStream());
-			InputStreamReader streamReader = new InputStreamReader(input);
+			InputStreamReader streamReader = new InputStreamReader(new DataInputStream(client.getInputStream()));
 			reader = new BufferedReader(streamReader);
 			out = new DataOutputStream(client.getOutputStream());
-//			in = new DataInputStream(input);
 		} catch (IOException e) {
 			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
@@ -67,27 +63,18 @@ public class Connection {
 	}
 
 	/**
-	 * Get input stream for accepted connection
-	 * @return input stream for this connection
-	 * @throws IOException if could not create input stream
-	 */
-	public InputStream getInputStream() throws IOException {
-		return client.getInputStream();
-	}
-
-	/**
 	 * Get output stream for accepted connection
 	 * @return output stream for this connection
-	 * @throws IOException if could not create output stream
 	 */
-	public OutputStream getOutputStream() throws IOException {
-		return client.getOutputStream();
+	public OutputStream getOutputStream() {
+		return this.out;
 	}
 
 	public BufferedReader getReader() {
 		return this.reader;
 	}
 
+	// TODO: may not need if we're not closing...but like we probs should be?
 	/**
 	 * Closes client-proxy connection
 	 * @throws IOException if there's an error while attempting to close

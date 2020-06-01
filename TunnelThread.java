@@ -20,6 +20,9 @@ public class TunnelThread extends Thread {
 		this.receiver = receiver;
 	}
 
+	/**
+	 * Forwards all data from sender to receiver
+	 */
 	public void run() {
 		try {
 //			System.out.println("Handling tunnel");
@@ -31,12 +34,16 @@ public class TunnelThread extends Thread {
 //			toReceiver.close();
 //			System.out.println("Done with tunnel");
 		} catch (SocketException se){
-			// do something? see ed post...
+			// TODO: hi
+			// do nothing? see ed post..."just general try catch blocks to handle cases where socket closed"
+			// https://us.edstem.org/courses/403/discussion/72632
+
 		} catch (IOException e) {
 //			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
 		}
 
+		// TODO: clean up?
 		// Clean up
 //		try {
 //			sender.close();
