@@ -7,7 +7,9 @@ import java.util.Arrays;
  */
 public class Connection {
 	private Socket client;
-	BufferedReader reader;
+	private BufferedReader reader; 	//TODO: may not be using all of these
+	private DataOutputStream out;
+	private DataInputStream input;
 
 	/**
 	 * Creates new connection between client and proxy
@@ -16,8 +18,11 @@ public class Connection {
 	public Connection(Socket client) {
 		this.client = client;
 		try {
-			InputStreamReader streamReader = new InputStreamReader(client.getInputStream());
+			input = new DataInputStream(client.getInputStream());
+			InputStreamReader streamReader = new InputStreamReader(input);
 			reader = new BufferedReader(streamReader);
+			out = new DataOutputStream(client.getOutputStream());
+//			in = new DataInputStream(input);
 		} catch (IOException e) {
 			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
@@ -31,15 +36,7 @@ public class Connection {
 	public String readLine() {
 		String line = null;
 		try {
-//			System.out.println("Trying to read");
-//			InputStreamReader streamReader = new InputStreamReader(client.getInputStream());
-//			BufferedReader reader = new BufferedReader(streamReader);
 			line = reader.readLine();
-//			System.out.println("Read the line: " + line);
-//			char[] buf = new char[256];
-//			int read = reader.read(buf, 0, 256);
-//			System.out.println("Read the line: " + Arrays.toString(buf));
-//			System.out.println("Read " + read + " bytes");
 		} catch (IOException e) {
 			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
@@ -53,10 +50,10 @@ public class Connection {
 	 */
 	public void write(String buf) {
 		try {
-			OutputStream os = getOutputStream();
-			os.write(buf.getBytes());
+			out.write(buf.getBytes());
+			out.flush();
 		} catch (IOException e){
-			System.out.println("Error: " + e.getMessage());
+			System.out.println("SADNESS Error: " + e.getMessage());
 			e.printStackTrace();
 		}
 	}
@@ -85,6 +82,10 @@ public class Connection {
 	 */
 	public OutputStream getOutputStream() throws IOException {
 		return client.getOutputStream();
+	}
+
+	public BufferedReader getReader() {
+		return this.reader;
 	}
 
 	/**

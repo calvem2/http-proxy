@@ -14,9 +14,12 @@ public class ProxyThread extends Thread {
 	private static final int PORT = 80;
 	private static final int SECURE_PORT = 443;
 
-	private Connection clientConnection;	// connection from client to proxy
-	private Socket serverConnection;		// connection from proxy to server
-	private Map<String, String> headers;	// headers of request
+	private Connection clientConnection;			// connection from client to proxy
+	private Socket serverConnection;				// connection from proxy to server
+	private LinkedHashMap<String, String> headers;	// headers of request
+	private String host;							// value of host header
+
+	String initLine; // todo: change back to local
 
 	/**
 	 * Creates new thread for given established connection
@@ -29,25 +32,23 @@ public class ProxyThread extends Thread {
 
 	public void run() {
 		// Get request line
-		String initLine = clientConnection.readLine();
+		initLine = clientConnection.readLine();
 		headers = getHeaders();
 		if (initLine != null) {
 			// Output first line of request
 			String date = new SimpleDateFormat("dd MMM HH:mm:ss").format(new Date());
 			System.out.println(date + " - >>> " + initLine);
-			System.out.println("Printed initial line");
 
 			// Determine request type: CONNECT or NON-CONNECT
 			String[] elements = initLine.split(" ");
-			String host = getHost(headers.get("host"));
-			int port = getPort(initLine, headers.get("host"));
+			int port = getPort(initLine, this.host);
 			if (elements[0].equals("CONNECT")) {
-				handleConnect(host, port);
+				handleConnect(getHost(), port);
 			} else {
-				handleNonConnect(host, port, initLine);
+				handleNonConnect(getHost(), port, initLine);
 			}
 		}
-		System.out.println("Done handling request");
+		System.out.println("Done handling request: " + initLine);
 
 		// TODO: close socket?
 //		try {
@@ -62,6 +63,8 @@ public class ProxyThread extends Thread {
 	/**
 	 * Tries to establish a connection between client and a server.
 	 * If connection is successful, forwards data between client and server.
+	 * @param host hostname to connect to
+	 * @param port port number to connect to
 	 */
 	public void handleConnect(String host, int port) {
 		try {
@@ -92,6 +95,8 @@ public class ProxyThread extends Thread {
 	/**
 	 * Establishes proxy-server connection and forwards client request to server and
 	 * server response to client
+	 * @param host hostname to connect to
+	 * @param port port number to connect to
 	 * @param initLine request line of HTTP client request
 	 */
 	public void handleNonConnect(String host, int port, String initLine) {
@@ -99,61 +104,84 @@ public class ProxyThread extends Thread {
 			System.out.println("Handling non-connect");
 			// Create connection
 			serverConnection = new Socket(host, port);
-			OutputStream toServer = serverConnection.getOutputStream();
+			DataOutputStream toServer = new DataOutputStream(serverConnection.getOutputStream());
 
 			// Edit request line and send
-			String requestLine = initLine.replaceAll("HTTP\\/.*", "HTTP/1.0\r\n");
+			String requestLine = initLine.replaceAll("HTTP/1.1", "HTTP/1.0\r\n");
 //			request.append(requestLine);
 			toServer.write(requestLine.getBytes());
 
 			// Edit headers and send
 			for (Map.Entry<String, String> h : headers.entrySet()) {
 				StringBuilder header = new StringBuilder();
-				header.append(h.getKey() + ": ");
+				header.append(h.getKey()).append(": ");
 				if (h.getKey().equalsIgnoreCase("connection") ||
 						h.getKey().equalsIgnoreCase("proxy-connection")) {
 					header.append("close\r\n");
 				} else {
-					header.append(h.getValue() + "\r\n");
+					header.append(h.getValue()).append("\r\n");
 				}
 				toServer.write(header.toString().getBytes());
-				System.out.println("Header sent to server: " + header.toString());
+//				System.out.println("Header sent to server: " + header.toString());
 			}
 			toServer.write("\r\n".getBytes());
 
-			// Pass header on to server
-			// WOW this was so wrong
-//			clientConnection.write(request.toString());
-//
-//			// Send rest of request to server
-//			InputStream fromClient = clientConnection.getInputStream();
-//			OutputStream toServer = serverConnection.getOutputStream();
-//			fromClient.transferTo(toServer);
-
 			// Send rest of request to server
-			InputStream fromClient = clientConnection.getInputStream();
-			fromClient.transferTo(toServer);
+			System.out.println("Sending payload to server");
+//			InputStream fromClient = clientConnection.getInputStream();
+//			fromClient.transferTo(toServer);
+//			String payloadLine = clientConnection.readLine();
+			while (clientConnection.getReader().ready()) {
+				String payloadLine = clientConnection.readLine();
+				payloadLine += "\r\n";
+				toServer.write(payloadLine.getBytes());
+//				System.out.println("Line sent: " + payloadLine);
+//				payloadLine = clientConnection.readLine();
+				System.out.println("Payload line sent for " + initLine + payloadLine);
+			}
 
-			// Send server response to client
-			InputStreamReader streamReader = new InputStreamReader(serverConnection.getInputStream());
+
+//			byte[] payload = new byte[256];
+//			int bytesRead = clientConnection.input.read(payload);
+//			while (bytesRead != -1) {
+//				toServer.write(payload, 0, bytesRead);
+//				toServer.flush();
+//				bytesRead = clientConnection.input.read(payload);
+//			}
+
+			// todo: condense to one line if not using method that uses input stream
+			InputStream serverIn = new DataInputStream(serverConnection.getInputStream());
+			InputStreamReader streamReader = new InputStreamReader(serverIn);
+
 			BufferedReader serverReader = new BufferedReader(streamReader);
 			System.out.println("Sending response back to client...");
 			String nextLine = serverReader.readLine();
 			while (nextLine != null) {
 				if (nextLine.contains("HTTP/")) {
-					nextLine.replaceAll("HTTP\\/.*", "HTTP/1.0\r\n");
-					System.out.println(nextLine);
-				} else if (nextLine.toLowerCase().contains("connection") ||
-						nextLine.toLowerCase().contains("proxy-connection")) {
-					nextLine.replace("keep-alive", "close");
+					nextLine = nextLine.replaceAll("HTTP/1.1", "HTTP/1.0");
+//					System.out.println(nextLine);
+				} else if (nextLine.toLowerCase().contains("connection: keep-alive") ||
+						nextLine.toLowerCase().contains("proxy-connection: keep-alive")) {
+					nextLine = nextLine.replaceAll("keep-alive", "close");
 				}
 
-				System.out.println(nextLine);
-				clientConnection.write("Line sent: " + nextLine);
+				clientConnection.write(nextLine + "\r\n");
+				System.out.println("Line sent for " + initLine + ": " + nextLine);
 				nextLine = serverReader.readLine();
 			}
 
-			System.out.println("Done sending to client");
+//			byte[] data = new byte[256];
+//			int read = serverIn.read(data);
+//			while (read != -1) {
+//				clientConnection.out.write(data, 0, read);
+//				System.out.println("Line sent: " + new String(data));
+//				clientConnection.out.flush();
+//				read = serverIn.read(data);
+//			}
+
+
+//			serverIn.transferTo(clientConnection.out);
+
 //			// Clean up
 //			clientConnection.close();
 //			serverConnection.close();
@@ -169,17 +197,22 @@ public class ProxyThread extends Thread {
 	 * Parse headers from client request
 	 * @return Map from header keyword to value for all specified headers
 	 */
-	public Map<String, String> getHeaders() {
-		System.out.println("Handling headers");
-		Map<String, String> headers = new LinkedHashMap<>();
+	public LinkedHashMap<String, String> getHeaders() {
+		LinkedHashMap<String, String> headers = new LinkedHashMap<>();
 //		System.out.println("About to try and read ok go");
 		String nextLine = clientConnection.readLine();
-//		System.out.println(nextLine);
+//		System.out.println("Header received: " + nextLine);
 		while (nextLine != null && !nextLine.equals("")) {
+
 //			System.out.println("Header for to be parsed: " + nextLine);
 			String[] elements = nextLine.split(":", 2);
 //			System.out.println(Arrays.toString(elements));
-			headers.put(elements[0].toLowerCase().trim(), elements[1].trim());
+			headers.put(elements[0].trim(), elements[1].trim());
+//			System.out.println("Header received: " + nextLine);
+
+			if (elements[0].equalsIgnoreCase("host")) {
+				this.host = elements[1].trim();
+			}
 			nextLine = clientConnection.readLine();
 		}
 		System.out.println("Done handling headers");
@@ -188,17 +221,17 @@ public class ProxyThread extends Thread {
 
 	/**
 	 * Parse host name from client request
-	 * @param hostHeader value of host header from client request
-	 * @return host name in hostHeader
+	 * @return host name in hostHeader in the form host or host:port
 	 */
-	private String getHost(String hostHeader) {
-		return hostHeader.split(":")[0];
+	private String getHost() {
+		// Split host from port
+		return this.host.split(":")[0];
 	}
 
 	/**
 	 * Parse specified port from client request
 	 * @param initLine first line of the client request
-	 * @param hostHeader value of host header from client request
+	 * @param hostHeader value of host header from client request in the form host or host:port
 	 * @return specified port in hostHeader or initLine if none is specified in header;
 	 * default port if no port is specified in the request
 	 */
@@ -206,11 +239,13 @@ public class ProxyThread extends Thread {
 		String[] elements = hostHeader.split(":");
 		// check if value is in format hostname:port
 		if (elements.length == 2) {
+			System.out.println("Determined port #: " + Integer.parseInt(elements[1]));
 			return Integer.parseInt(elements[1]);
 		}
 
 		// check initial line for port number
 		String uri = initLine.split(" ")[1];
+		System.out.println(uri);
 
 		// separate transport from rest of uri
 		String[] uriElements = uri.split("://");
@@ -221,13 +256,16 @@ public class ProxyThread extends Thread {
 		} else {
 			hostAndPort = uriElements[1].split(":");
 		}
-
+		System.out.println(Arrays.toString(uriElements));
 		// return specified port or proper default port
 		if (hostAndPort.length == 2) {
+			System.out.println("Determined port #: " + Integer.parseInt(hostAndPort[1]));
 			return Integer.parseInt(hostAndPort[1]);
-		} else if (uriElements.length == 2 && uriElements[1].equals("https")) {
+		} else if (uriElements.length == 2 && uriElements[0].trim().equalsIgnoreCase("https")) {
+			System.out.println("Determined port #: " + SECURE_PORT);
 			return SECURE_PORT;
 		} else {
+			System.out.println("Determined port #: " + PORT);
 			return PORT;
 		}
 	}

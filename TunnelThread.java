@@ -22,18 +22,18 @@ public class TunnelThread extends Thread {
 
 	public void run() {
 		try {
-			System.out.println("Handling tunnel");
+//			System.out.println("Handling tunnel");
 			DataInputStream fromSender = new DataInputStream(sender.getInputStream());
 			DataOutputStream toReceiver = new DataOutputStream(receiver.getOutputStream());
 			fromSender.transferTo(toReceiver);
 //			fromSender.close();
 //			toReceiver.flush();
 //			toReceiver.close();
-			System.out.println("Done with tunnel");
+//			System.out.println("Done with tunnel");
 		} catch (SocketException se){
 			// do something? see ed post...
 		} catch (IOException e) {
-			System.out.println("Error: " + e.getMessage());
+//			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
 		}
 
