@@ -28,20 +28,16 @@ public class TunnelThread extends Thread {
 			DataInputStream fromSender = new DataInputStream(sender.getInputStream());
 			DataOutputStream toReceiver = new DataOutputStream(receiver.getOutputStream());
 			fromSender.transferTo(toReceiver);
-		} catch (SocketException se){
-			// Do nothing - catching when socket is closed
+		} catch (SocketException se) {
+			// Do nothing when socket is reset
 		} catch (IOException e) {
-			System.out.println("Error: " + e.getMessage());
-			e.printStackTrace();
+			// Do nothing if socket is closed
+			if (e.getMessage().equals("Socket Closed")) {
+				// Do nothing
+			} else {
+				System.out.println("Error: " + e.getMessage());
+				e.printStackTrace();
+			}
 		}
-//		// TODO: clean up?
-//		// Clean up
-//		try {
-//			sender.close();
-//			receiver.close();
-//		} catch (IOException e) {
-//			System.out.println("Error closing socket");
-//			e.printStackTrace();
-//		}
 	}
 }

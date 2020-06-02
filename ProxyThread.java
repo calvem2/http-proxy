@@ -17,8 +17,6 @@ public class ProxyThread extends Thread {
 	private LinkedHashMap<String, String> headers;	// headers of request
 	private String host;							// value of host header in request received
 
-	String initLine; // todo: change back to local
-
 	/**
 	 * Creates new thread for given established connection
 	 * @param clientConnection TCP connection from client to proxy
@@ -32,29 +30,32 @@ public class ProxyThread extends Thread {
 	 * Handles CONNECT and non-connect requests between client and a server
 	 */
 	public void run() {
-		// Get request line
-		initLine = clientConnection.readLine();
-		headers = getHeaders();
-		if (initLine != null) {
-			// Output first line of request
-			String date = new SimpleDateFormat("dd MMM HH:mm:ss").format(new Date());
-			System.out.println(date + " - >>> " + initLine);
+		try {
+			// Get request line
+			String initLine = clientConnection.readLine();
+			headers = getHeaders();
+			if (initLine != null) {
+				// Output first line of request
+				String date = new SimpleDateFormat("dd MMM HH:mm:ss").format(new Date());
+				System.out.println(date + " - >>> " + initLine);
 
-			// Determine request type: CONNECT or NON-CONNECT
-			String[] elements = initLine.split(" ");
-			int port = getPort(initLine, this.host);
-			if (elements[0].equals("CONNECT")) {
-				handleConnect(getHost(), port);
-			} else {
-				handleNonConnect(getHost(), port, initLine);
+				// Determine request type: CONNECT or NON-CONNECT
+				String[] elements = initLine.split(" ");
+				int port = getPort(initLine, this.host);
+				if (elements[0].equals("CONNECT")) {
+					handleConnect(getHost(), port);
+				} else {
+					handleNonConnect(getHost(), port, initLine);
+				}
+				// Close the server connection
+				serverConnection.close();
 			}
+			// Close the client connection
+			clientConnection.close();
+		} catch (IOException e) {
+			System.out.println("Error: " + e.getMessage());
+			e.printStackTrace();
 		}
-//		try {
-//			clientConnection.close();
-//			serverConnection.close();
-//		} catch (IOException e) {
-//			System.out.println("SOCKET CLOSED");
-//		}
 	}
 
 	/**
@@ -73,13 +74,14 @@ public class ProxyThread extends Thread {
 
 			// Transfer bytes from client and server
 			TunnelThread clientToServer = new TunnelThread(clientConnection.getSocket(), serverConnection);
+			clientToServer.start();
 
 			// Transfer bytes from server to client
 			TunnelThread serverToClient = new TunnelThread(serverConnection, clientConnection.getSocket());
-
-			// Start the threads
-			clientToServer.start();
 			serverToClient.start();
+
+			clientToServer.join();
+			serverToClient.join();
 		} catch (Exception e) {
 			// Send HTTP error response
 			clientConnection.write("HTTP/1.0 502 Bad Gateway\r\n\r\n");
@@ -138,15 +140,6 @@ public class ProxyThread extends Thread {
 		} catch (Exception e) {
 			System.out.println("Error: " + e.getMessage());
 			e.printStackTrace();
-		} finally {
-			try {
-				// Close the connections
-				clientConnection.close();
-				serverConnection.close();
-			} catch (Exception e) {
-				System.out.println("Error: " + e.getMessage());
-				e.printStackTrace();
-			}
 		}
 	}
 
